@@ -7,28 +7,31 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: Login to Amazon ECR
-        env:
-          AWS_REGION: us-east-1
-          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
         with:
-          registry: $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
       - name: Build and push docker image
-        id: build-and-push
+        id: build-image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: hello-demo
+          IMAGE_TAG: latest
         run: |
+          echo $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker build -t hello-demo .
-          docker tag hello-demo:latest $ECR_REGISTRY/hello-demo:latest
-          docker push $ECR_REGISTRY/hello-demo:latest
+          docker tag hello-demo:latest $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
       - name: Deploy Lambda function
         env:
           AWS_REGION: us-east-1
           AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
         run: |
-          aws lambda update-function-code --function-name <function-name> --image-uri $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/hello-demo:latest
+          aws lambda update-function-code --function-name lambda-gh-demo --image-uri $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
