@@ -1,0 +1,31 @@
+name: Deploy Lambda Function with docker
+
+on:
+  push:
+    branches: dev
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+        with:
+          registry: <account-id>.dkr.ecr.<region>.amazonaws.com
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      - name: Build and push docker image
+        id: build-and-push
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          docker build -t hello-demo .
+          docker tag hello-demo:latest $ECR_REGISTRY/hello-demo:latest
+          docker push $ECR_REGISTRY/hello-demo:latest
+      - name: Deploy Lambda function
+        env:
+          AWS_REGION: <region>
+          AWS_ACCOUNT_ID: <account-id>
+        run: |
+          aws lambda update-function-code --function-name <function-name> --image-uri $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/hello-demo:latest
