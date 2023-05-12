@@ -1,5 +1,7 @@
 # Github Action to deploy Lambda and test with API Gateway
 
+## Fork this repo or create a new one an copy the files.
+
 ## Setup ECR
 
 Create an ecr and upload image in the ecr. Is necessary to pass your account-id (aws)
