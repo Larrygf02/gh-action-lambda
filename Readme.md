@@ -8,7 +8,7 @@ Create an ecr and upload image in the ecr. Is necessary to pass your account-id 
     sh ecr-setup.sh <your-account-id>
 ```
 
-## Execute cloudformation
+## Execute cloudformation (deploy.yml)
 
 This cloudformation creates an API and Lambda Function.
 
