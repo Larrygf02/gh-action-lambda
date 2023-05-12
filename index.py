@@ -4,5 +4,5 @@ def lambda_handler(event, context):
     print("end function")
     return {
         'statusCode': 200,
-        'body': 'Github action lambda - testing ci/cd'
+        'body': 'Github action lambda - testing ci/cd - v2'
     }

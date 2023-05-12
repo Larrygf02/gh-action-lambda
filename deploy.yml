@@ -1,0 +1,96 @@
+Description: Template to create API Gateway y Lambda
+Parameters:
+  ProjectName:
+    Type: String
+    Description: ProjectName
+    Default: gh-lambda
+  env:
+    Type: String
+    Description: Environment
+    Default: dev
+Resources:
+  LambdaExecutionRoleResource:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+      Path: /
+      RoleName: !Sub lambda-execution-role-${env}
+  LambdaFunctionResource:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${ProjectName}-${env}
+      PackageType: Image
+      Code:
+        ImageUri: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/lambda-gh-api-demo:latest
+      Role: !GetAtt LambdaExecutionRoleResource.Arn
+      Timeout: 200
+      MemorySize: 512
+  ApiGateway:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      ApiKeySourceType: HEADER
+      Description: !Sub Lambda to ${ProjectName}
+      Name: !Sub api-${ProjectName}-${env}
+  ApiGatewayResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt ApiGateway.RootResourceId
+      PathPart: "greet"
+      RestApiId: !Ref ApiGateway
+  ApiGatewayMethodResource:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ApiKeyRequired: false
+      AuthorizationType: NONE
+      HttpMethod: POST
+      Integration:
+        Credentials: !GetAtt ApiGatewayIamRole.Arn
+        IntegrationHttpMethod: POST
+        Type: AWS_PROXY
+        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaFunctionResource.Arn}/invocations"
+      ResourceId: !Ref ApiGatewayResource
+      RestApiId: !Ref ApiGateway
+  ApiGatewayStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      DeploymentId: !Ref ApiGatewayDeployment
+      RestApiId: !Ref ApiGateway
+      StageName: !Sub ${env}
+  ApiGatewayDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn: ApiGatewayMethodResource
+    Properties:
+      Description: Lambda API Deployment
+      RestApiId: !Ref ApiGateway
+  ApiGatewayIamRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: ""
+            Effect: "Allow"
+            Principal:
+              Service:
+                - "apigateway.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        - PolicyName: LamdaAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action: "lambda:*"
+                Resource: !GetAtt LambdaFunctionResource.Arn
