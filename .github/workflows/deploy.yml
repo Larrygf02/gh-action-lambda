@@ -36,4 +36,4 @@ jobs:
           IMAGE_TAG: latest
         run: |
           echo $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          aws lambda update-function-code --function-name lambda-gh-demo --image-uri $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          aws lambda update-function-code --function-name gh-lambda-dev --image-uri $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
